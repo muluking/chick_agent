@@ -3,6 +3,7 @@ from chick_agent.core.agent import Agent
 from chick_agent.core.config import Config
 from chick_agent.core.llm import ChickAgentLLM
 from chick_agent.core.message import Message
+from chick_agent.tools import ToolRegistry, Tool
 
 
 class SimpleAgent(Agent):
@@ -11,8 +12,13 @@ class SimpleAgent(Agent):
         name: str,
         llm: ChickAgentLLM,
         system_prompt: str | None = None,
+        tool_registry: ToolRegistry | None = None,
         config: Config | None = None,
     ):
+        if tool_registry is None:
+            self.tool_registry = ToolRegistry()
+        else:
+            self.tool_registry = tool_registry
         super().__init__(name, llm, system_prompt, config)
 
     def run(self, input_text: str, **kwargs) -> str:
@@ -42,6 +48,10 @@ class SimpleAgent(Agent):
 
         self.add_message(Message(input_text, "user"))
         self.add_message(Message(full_response, "assistant"))
+
+    def add_tool(self, tool: Tool, auto_expand: bool = True):
+        self.enable_tool_calling = True
+        self.tool_registry.register_tool(tool, auto_expand=auto_expand)
 
 
 if __name__ == "__main__":

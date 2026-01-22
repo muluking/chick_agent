@@ -37,15 +37,21 @@ class MCPClient:
                     env=self.env if self.env else None,
                     **self.kwargs,
                 )
+        elif isinstance(server_source, list) and len(server_source) > 0:
+            print(f"使用 Stdio 传输: {' '.join(server_source)}")
+            return StdioTransport(
+                command=server_source[0],
+                args=server_source[1:] + self.server_args,
+                env=self.env if self.env else None,
+                **self.kwargs,
+            )
 
         return server_source
 
     async def __aenter__(self):
-        print("连接到MCP服务器")
         self.client = Client(self.server_source)
         self._context_manager = self.client
         await self._context_manager.__aenter__()
-        print("连接成功")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -53,7 +59,6 @@ class MCPClient:
             await self._context_manager.__aexit__(exc_type, exc_val, exc_tb)
             self.client = None
             self._context_manager = None
-        print("连接断开")
 
     async def list_tools(self) -> list[dict[str, object]]:
         if not self.client:
