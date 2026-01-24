@@ -1,3 +1,5 @@
+import re
+
 from collections.abc import Iterator
 from chick_agent.core.agent import Agent
 from chick_agent.core.config import Config
@@ -21,7 +23,7 @@ class SimpleAgent(Agent):
             self.tool_registry = tool_registry
         super().__init__(name, llm, system_prompt, config)
 
-    def run(self, input_text: str, **kwargs) -> str:
+    def run(self, input_text: str, max_tool_iterations: int = 3, **kwargs) -> str:
         messages = []
         enhanced_prompt = self._get_system_tool_prompt()
         print(enhanced_prompt)
@@ -32,8 +34,135 @@ class SimpleAgent(Agent):
 
         messages.append({"role": "user", "content": input_text})
 
-        response = self.llm.invoke(messages, **kwargs)
-        return response
+        if not self.enable_tool_calling:
+            response = self.llm.invoke(messages, **kwargs)
+            self.add_message(Message(input_text, "user"))
+            self.add_message(Message(response, "assistant"))
+            return response
+
+        current_iteration = 0
+        final_response = ""
+
+        while current_iteration < max_tool_iterations:
+            current_iteration += 1
+            response = self.llm.invoke(messages, **kwargs)
+            print(f"{current_iteration}: {response}")
+            tool_calls = self._parse_tool_calls(response)
+            if tool_calls:
+                tool_results = []
+                prev_response = response
+                for call in tool_calls:
+                    result = self._execute_tool_call(
+                        call["tool_name"], call["parameters"]
+                    )
+                    tool_results.append(result)
+                    # 删除此次工具调用
+                    prev_response = prev_response.replace(call["original"], "")
+                messages.append({"role": "assistant", "content": prev_response})
+                tool_results_text = "\n\n".join(tool_results)
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": f"工具执行结果: \n{tool_results_text}\n\n请基于这些结果给出完整的答复",
+                    }
+                )
+                continue
+            final_response = response
+            break
+        if current_iteration >= max_tool_iterations and not final_response:
+            final_response = self.llm.invoke(messages, **kwargs)
+
+        self.add_message(Message(input_text, "user"))
+        self.add_message(Message(final_response, "assistant"))
+        return final_response
+
+    def _execute_tool_call(self, tool_name: str, tool_parameters: str) -> str:
+        try:
+            tool = self.tool_registry.get_tool(tool_name)
+            print(tool.get_parameters())
+            if not tool:
+                return f"错误: 未找到工具 {tool_name}"
+            params = self._parse_tool_parameters(tool_name, tool_parameters)
+            result = tool.run(params)
+            return f"工具 {tool_name} 执行结果\n{result}"
+        except Exception as e:
+            return f"调用工具 {tool_name} 失败"
+
+    def _parse_tool_parameters(
+        self, tool_name: str, parameters: str
+    ) -> dict[str, object]:
+        params = {}
+        if "=" in parameters:
+            if "," in parameters:
+                parameters_pairs = parameters.split(",")
+                for pair in parameters_pairs:
+                    n, v = pair.split("=", maxsplit=1)
+                    params[n.strip()] = v.strip()
+            else:
+                n, v = parameters.split("=", maxsplit=1)
+                params[n.strip()] = v.strip()
+            params = self._convert_parameter_types(tool_name, params)
+        return params
+
+    def _convert_parameter_types(
+        self, tool_name: str, params: dict[str, object]
+    ) -> dict[str, object]:
+        tool = self.tool_registry.get_tool(tool_name)
+        if not tool:
+            return params
+
+        tool_parameters = tool.get_parameters()
+        if not tool_parameters:
+            return params
+
+        param_types = {}
+        for param in tool_parameters:
+            param_types[param.name] = param.type
+
+        converted_params = {}
+        for k, v in params.items():
+            if k in param_types.keys():
+                ty = param_types[k]
+                try:
+                    if ty == "number" or ty == "integer":
+                        # 转换为数字
+                        if isinstance(v, str):
+                            converted_params[k] = float(v) if ty == "number" else int(v)
+                        else:
+                            converted_params[k] = v
+                    elif ty == "boolean":
+                        # 转换为布尔值
+                        if isinstance(v, str):
+                            converted_params[k] = v.lower() in (
+                                "true",
+                                "1",
+                                "yes",
+                                "是",
+                            )
+                        else:
+                            converted_params[k] = bool(v)
+                    else:
+                        converted_params[k] = v
+                except (ValueError, TypeError):
+                    # 转换失败，保持原值
+                    converted_params[k] = v
+            else:
+                converted_params[k] = v
+        return converted_params
+
+    def _parse_tool_calls(self, text: str) -> list[dict[str, str]]:
+        pattern = r"\[TOOL_CALL:([^:]+):([^\]]+)\]"
+        matches = re.findall(pattern, text)
+        tool_calls = []
+        for tool_name, parameters in matches:
+            tool_calls.append(
+                {
+                    "tool_name": tool_name.strip(),
+                    "parameters": parameters.strip(),
+                    "original": f"[TOOL_CALL:{tool_name}:{parameters}]",
+                }
+            )
+        return tool_calls
 
     def stream_run(self, input_text: str, **kwargs) -> Iterator[str]:
         messages = []
@@ -72,8 +201,6 @@ class SimpleAgent(Agent):
         full_prompt += "   示例：`[TOOL_CALL:filesystem_read_file:path=README.md]`\n\n"
         full_prompt += "2. **单个参数**：直接使用 `key=value`\n"
         full_prompt += "   示例：`[TOOL_CALL:search:query=Python编程]`\n\n"
-        full_prompt += "3. **简单查询**：可以直接传入文本\n"
-        full_prompt += "   示例：`[TOOL_CALL:search:Python编程]`\n\n"
 
         full_prompt += "### 重要提示\n"
         full_prompt += "- 参数名必须与工具定义的参数名完全匹配\n"

@@ -23,3 +23,6 @@ class ToolRegistry:
         for tool in self._tools.values():
             descriptions.append(f"- {tool.name}: {tool.description}")
         return "\n".join(descriptions) if descriptions else "无可用工具"
+
+    def get_tool(self, name: str) -> Tool | None:
+        return self._tools.get(name)
