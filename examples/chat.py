@@ -1,10 +1,10 @@
 from chick_agent.agent import SimpleAgent
 from chick_agent.core import ChickAgentLLM
 from chick_agent.tools import MCPTool
+from chick_agent.core import Config
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
-from chick_agent.core import Config
 
 
 def repr():
