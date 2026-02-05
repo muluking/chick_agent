@@ -4,18 +4,20 @@ from chick_agent.core.config import Config
 from chick_agent.core.llm import ChickAgentLLM
 from chick_agent.core.message import Message
 from chick_agent.tools import ToolRegistry
+import httpx
 
 
 class SimpleAgent(BasicAgent):
     def __init__(
         self,
         name: str,
-        llm: ChickAgentLLM,
+        llm: ChickAgentLLM | None = None,
         system_prompt: str | None = None,
         tool_registry: ToolRegistry | None = None,
         config: Config | None = None,
+        client: httpx.Client | None = None,
     ):
-        super().__init__(name, llm, system_prompt, tool_registry, config)
+        super().__init__(name, llm, system_prompt, tool_registry, config, client)
 
     @override
     def run(
@@ -41,7 +43,7 @@ class SimpleAgent(BasicAgent):
             return response
 
         current_iteration = 0
-        final_response = ""
+        full_response = ""
 
         while current_iteration < max_tool_iterations:
             current_iteration += 1
@@ -66,11 +68,11 @@ class SimpleAgent(BasicAgent):
                     }
                 )
                 continue
-            final_response = response
+            full_response = response
             break
-        if current_iteration >= max_tool_iterations and not final_response:
-            final_response = self._execute_llm(messages, stream, **kwargs)
+        if current_iteration >= max_tool_iterations and not full_response:
+            full_response = self._execute_llm(messages, stream, **kwargs)
 
         self.add_message(Message(input_text, "user"))
-        self.add_message(Message(final_response, "assistant"))
-        return final_response
+        self.add_message(Message(full_response, "assistant"))
+        return full_response

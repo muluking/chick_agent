@@ -22,10 +22,10 @@ class ChickAgentLLM:
         api_key: str | None = None,
         base_url: str | None = None,
         provider: SUPPORTED_PROVIDERS | None = None,
-        http_client: httpx.Client | None = None,
         temperature: float = 0.7,
         max_tokens: int | None = None,
         timeout: int | None = None,
+        http_client: httpx.Client | None = None,
         **kwargs,
     ):
         # 优先使用传入参数，如果未提供，则从环境变量加载
@@ -108,14 +108,14 @@ class ChickAgentLLM:
                     reasoning_content = delta.reasoning_content
                     if reasoning_content:
                         if not is_thinking_start:
-                            yield "思考中...\n"
+                            yield "<think>"
                             is_thinking_start = True
                         yield reasoning_content
                 if hasattr(delta, "content"):
                     content = delta.content or ""
                     if content:
                         if not is_answering_start and is_thinking_start:
-                            yield f"\n\n{'=' * 20}\n"
+                            yield f"</think>"
                             is_answering_start = True
                         yield content
             print()
@@ -138,9 +138,7 @@ class ChickAgentLLM:
             )
             message = response.choices[0].message
             if hasattr(message, "reasoning_content") and message.reasoning_content:
-                full_response = (
-                    f"思考中...\n{message.reasoning_content}\n\n{'=' * 20}\n"
-                )
+                full_response = f"<think>{message.reasoning_content}</think>"
             full_response = f"{full_response}{response.choices[0].message.content}"
             return full_response
         except Exception as e:

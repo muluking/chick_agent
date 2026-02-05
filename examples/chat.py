@@ -1,6 +1,7 @@
 from chick_agent.agent import SimpleAgent
 from chick_agent.core import ChickAgentLLM
 from chick_agent.tools import MCPTool
+from chick_agent.core import Config
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
@@ -11,8 +12,9 @@ def repr():
 
     agent = SimpleAgent(
         name="🤖",
-        llm=ChickAgentLLM(client=httpx.Client(trust_env=False)),
         system_prompt="你是一名有用的AI助手",
+        config=Config.from_toml(id="deepseek"),
+        client=httpx.Client(trust_env=False),
     )
     session = PromptSession(history=FileHistory("/tmp/.chat.history"))
 
