@@ -22,10 +22,10 @@ class ChickAgentLLM:
         api_key: str | None = None,
         base_url: str | None = None,
         provider: SUPPORTED_PROVIDERS | None = None,
-        http_client: httpx.Client | None = None,
         temperature: float = 0.7,
         max_tokens: int | None = None,
         timeout: int | None = None,
+        http_client: httpx.Client | None = None,
         **kwargs,
     ):
         # 优先使用传入参数，如果未提供，则从环境变量加载

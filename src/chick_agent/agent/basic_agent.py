@@ -6,6 +6,7 @@ from chick_agent.core.config import Config
 from chick_agent.core.llm import ChickAgentLLM
 from chick_agent.tools import ToolRegistry, Tool
 
+import httpx
 
 TOOL_USAGE_PROMPT = """
 {basic_prompt}
@@ -37,11 +38,23 @@ class BasicAgent(Agent):
     def __init__(
         self,
         name: str,
-        llm: ChickAgentLLM,
+        llm: ChickAgentLLM | None = None,
         system_prompt: str | None = None,
         tool_registry: ToolRegistry | None = None,
         config: Config | None = None,
+        client: httpx.Client | None = None,
     ):
+        if not llm and config:
+            llm = ChickAgentLLM(
+                model=config.model,
+                api_key=config.api_key,
+                base_url=config.base_url,
+                provider=config.provider,
+                temperature=config.temperature,
+                max_tokens=config.max_tokens,
+                timeout=config.timeout,
+                client=client,
+            )
         self.enable_tool_calling = False
         if tool_registry is None:
             self.tool_registry = ToolRegistry()
@@ -58,7 +71,7 @@ class BasicAgent(Agent):
                 if chunk == "<think>":
                     print("思考中:")
                 elif chunk == "</think>":
-                    print("\n开始回答:")
+                    print("\n\n开始回答:")
                 else:
                     print(chunk, end="", flush=True)
                 response += chunk

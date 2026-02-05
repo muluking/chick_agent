@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from chick_agent.core.exceptions import LLMException
 from chick_agent.core.llm import ChickAgentLLM
 from chick_agent.core.config import Config
 from chick_agent.core.message import Message
@@ -12,6 +13,8 @@ class Agent(ABC):
         system_prompt: str | None = None,
         config: Config | None = None,
     ):
+        if not llm:
+            raise LLMException("llm client should be initialized.")
         self.name = name
         self.llm = llm
         self.system_prompt = system_prompt
