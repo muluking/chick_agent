@@ -55,12 +55,20 @@ class BasicAgent(Agent):
         response = ""
         if stream:
             for chunk in self.llm.think(messages, **kwargs):
-                print(chunk, end="", flush=True)
+                if chunk == "<think>":
+                    print("思考中:")
+                elif chunk == "</think>":
+                    print("\n开始回答:")
+                else:
+                    print(chunk, end="", flush=True)
                 response += chunk
         else:
             response = self.llm.invoke(messages, **kwargs)
             print(response)
-        return response
+        clean_response = re.sub(
+            r"<think>.*?</think>", "", response, flags=re.DOTALL
+        ).strip()
+        return clean_response
 
     @override
     def run(self, input_text: str, **kwargs) -> str:
