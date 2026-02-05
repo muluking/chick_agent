@@ -1,3 +1,4 @@
+from prompt_toolkit import key_binding
 from chick_agent.agent import SimpleAgent
 from chick_agent.core import ChickAgentLLM
 from chick_agent.tools import MCPTool
@@ -5,6 +6,8 @@ from chick_agent.core import Config
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.keys import Keys
 
 
 def repr():
@@ -16,7 +19,24 @@ def repr():
         config=Config.from_toml(id="deepseek"),
         client=httpx.Client(trust_env=False),
     )
-    session = PromptSession(history=FileHistory("/tmp/.chat.history"))
+    kb = KeyBindings()
+
+    @kb.add(Keys.ControlJ)
+    def _(event):
+        event.current_buffer.validate_and_handle()
+
+    # @kb.add(Keys.Enter)
+    # def _(event):
+    #     event.current_buffer.insert_text("\n")
+    #
+    # # 备选方案：使用 Alt+Enter 提交
+    # @kb.add(Keys.Escape, Keys.Enter)
+    # def _(event):
+    #     event.current_buffer.validate_and_handle()
+
+    session = PromptSession(
+        history=FileHistory("/tmp/.chat.history"), key_bindings=kb, multiline=True
+    )
 
     while True:
         try:
