@@ -1,4 +1,3 @@
-from prompt_toolkit import key_binding
 from chick_agent.agent import SimpleAgent
 from chick_agent.core import ChickAgentLLM
 from chick_agent.tools import MCPTool
@@ -16,7 +15,7 @@ def repr():
     agent = SimpleAgent(
         name="🤖",
         system_prompt="你是一名有用的AI助手",
-        config=Config.from_toml(id="deepseek"),
+        config=Config.from_toml(id="nl"),
         client=httpx.Client(trust_env=False),
     )
 

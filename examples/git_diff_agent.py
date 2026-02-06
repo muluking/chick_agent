@@ -29,7 +29,7 @@ def git_diff_commiter():
     agent = SimpleAgent(
         name="🤖",
         system_prompt=SYSTEM_PROMPT,
-        config=Config.from_toml(id="doubao"),
+        config=Config.from_toml(id="db"),
         client=httpx.Client(trust_env=False),
     )
 
