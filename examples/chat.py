@@ -19,20 +19,12 @@ def repr():
         config=Config.from_toml(id="deepseek"),
         client=httpx.Client(trust_env=False),
     )
+
     kb = KeyBindings()
 
     @kb.add(Keys.ControlJ)
     def _(event):
         event.current_buffer.validate_and_handle()
-
-    # @kb.add(Keys.Enter)
-    # def _(event):
-    #     event.current_buffer.insert_text("\n")
-    #
-    # # 备选方案：使用 Alt+Enter 提交
-    # @kb.add(Keys.Escape, Keys.Enter)
-    # def _(event):
-    #     event.current_buffer.validate_and_handle()
 
     session = PromptSession(
         history=FileHistory("/tmp/.chat.history"), key_bindings=kb, multiline=True
