@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 from chick_agent.agent import SimpleAgent
 from chick_agent.core import ChickAgentLLM
 from chick_agent.tools import MCPTool
@@ -15,7 +18,7 @@ def repr():
     agent = SimpleAgent(
         name="🤖",
         system_prompt="你是一名有用的AI助手",
-        config=Config.from_toml(id="nl"),
+        config=Config.from_toml(id="dp"),
         client=httpx.Client(trust_env=False),
     )
 
@@ -25,8 +28,11 @@ def repr():
     def _(event):
         event.current_buffer.validate_and_handle()
 
+    temp_dir = tempfile.gettempdir()
     session = PromptSession(
-        history=FileHistory("/tmp/.chat.history"), key_bindings=kb, multiline=True
+        history=FileHistory(os.path.join(temp_dir, ".chat.history")),
+        key_bindings=kb,
+        multiline=True,
     )
 
     while True:
