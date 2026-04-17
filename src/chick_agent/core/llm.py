@@ -4,7 +4,7 @@ import httpx
 from typing import Literal
 from collections.abc import Iterator
 
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 
 from chick_agent.core.exceptions import ChickAgentException, LLMException
 
@@ -26,6 +26,7 @@ class ChickAgentLLM:
         max_tokens: int | None = None,
         timeout: int | None = None,
         http_client: httpx.Client | None = None,
+        http_async_client: httpx.AsyncClient | None = None,
         **kwargs,
     ):
         # 优先使用传入参数，如果未提供，则从环境变量加载
@@ -46,6 +47,7 @@ class ChickAgentLLM:
             raise ChickAgentException("未找到合适的api_key或api地址")
             return
         self._client = self._create_client(http_client)
+        self._async_client = self._create_async_client(http_async_client)
 
     def _resolve_credentials(
         self, api_key: str | None = None, base_url: str | None = None
@@ -77,13 +79,29 @@ class ChickAgentLLM:
         else:
             return "deepseek-chat"
 
-    def _create_client(self, http_client: httpx.Client = None) -> OpenAI:
+    def _create_client(self, http_client: httpx.Client | None = None) -> OpenAI:
         return OpenAI(
             api_key=self.api_key,
             base_url=self.base_url,
             timeout=self.timeout,
             http_client=http_client,
         )
+
+    def _create_async_client(
+        self, http_client: httpx.AsyncClient | None = None
+    ) -> AsyncOpenAI:
+        return AsyncOpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            timeout=self.timeout,
+            http_client=http_client,
+        )
+
+    def think_async(
+        self, messages: list[dict[str, str]], temperature: float | None = None
+    ) -> Iterator[str]:
+        pass
+        
 
     def think(
         self, messages: list[dict[str, str]], temperature: float | None = None
